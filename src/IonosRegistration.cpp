@@ -3,12 +3,13 @@
 // IonosRegistration.cpp - SoapySDR find/make for driver=ionos
 //   Copyright (c) 2026 Zoltan Doczi HA7DCD
 //
-// Candidates: USB CDC ports with the Ionos VID/PID (TinyUSB 0x303A:0x4001, the
-// older USB-Serial/JTAG path 0x303A:0x1001), on macOS every cu.usbmodem*, plus
+// Candidates: USB CDC ports with an Ionos VID/PID (own PID 0x303A:0x83EC, requested
+// in espressif/usb-pids#436; the generic TinyUSB 0x303A:0x4001 and the older
+// USB-Serial/JTAG path 0x303A:0x1001), on macOS every cu.usbmodem*, plus
 // any ports listed in the IONOS_PORTS environment variable (separated by ',' or
 // ';' - used for the mock device and unusual setups), or exactly port=<path>.
-// Both PIDs are generic Espressif ones, so a candidate is only reported when it
-// answers with the hello block (or, v1 firmware, streams IQB2 blocks).
+// The generic PIDs are shared with any ESP32-S3, so a candidate is only reported
+// when it answers with the hello block (or, v1 firmware, streams IQB2 blocks).
 
 #include "IonosDevice.hpp"
 
@@ -22,6 +23,7 @@
 namespace ionos {
 
 static const uint16_t VID_ESPRESSIF = 0x303A;
+static const uint16_t PID_IONOS = 0x83EC;        // Ionos SDR family PID (espressif/usb-pids#436)
 static const uint16_t PID_TINYUSB_CDC = 0x4001;  // esp_tinyusb default PID, CDC only (IONOS_USB_TINYUSB=1)
 static const uint16_t PID_USB_SERIAL_JTAG = 0x1001;
 static const char *const IONOS_PRODUCT = "ionos-sdr-mini";
@@ -67,7 +69,7 @@ SoapySDR::KwargsList findIonos(const SoapySDR::Kwargs &args) {
         addPath(args.at("port"));
     } else {
         for (const auto &p : ports) {
-            const bool idMatch = p.vid == VID_ESPRESSIF && (p.pid == PID_TINYUSB_CDC || p.pid == PID_USB_SERIAL_JTAG);
+            const bool idMatch = p.vid == VID_ESPRESSIF && (p.pid == PID_IONOS || p.pid == PID_TINYUSB_CDC || p.pid == PID_USB_SERIAL_JTAG);
             if (idMatch || p.vid == 0) addPath(p.path);
         }
         for (const auto &p : envPorts()) addPath(p);

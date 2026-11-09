@@ -1,0 +1,6 @@
+# Ionos SDR (ESP32-S3 USB CDC I/Q stream)
+# Keep ModemManager off the port and give the logged-in user access.
+# 303a:83ec = Ionos SDR family PID; 303a:4001 = generic TinyUSB CDC (older firmware).
+SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="83ec", ENV{ID_MM_DEVICE_IGNORE}="1", MODE="0660", TAG+="uaccess", SYMLINK+="ionos-sdr%n"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="4001", ATTRS{product}=="ionos-sdr*", ENV{ID_MM_DEVICE_IGNORE}="1", MODE="0660", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="83ec", ENV{ID_MM_DEVICE_IGNORE}="1"

@@ -15,7 +15,7 @@ block, so a new radio board needs no driver change.
 
 ```sh
 sudo apt install cmake g++ libsoapysdr-dev soapysdr-tools
-cmake -S host/soapy-ionos -B build-soapy
+cmake -S . -B build-soapy
 cmake --build build-soapy -j
 sudo cmake --install build-soapy        # module -> <prefix>/lib/SoapySDR/modules0.8/
 SoapySDRUtil --find=driver=ionos
@@ -23,13 +23,18 @@ SoapySDRUtil --find=driver=ionos
 
 Without installing: `export SOAPY_SDR_PLUGIN_PATH=$PWD/build-soapy`.
 The user needs access to `/dev/ttyACM*` (group `dialout` on Debian/Ubuntu).
-ModemManager may probe new ttyACM ports for a few seconds after plug-in; if it
-interferes, add a udev rule `ATTRS{idVendor}=="303a", ATTRS{idProduct}=="4001", ENV{ID_MM_DEVICE_IGNORE}="1"`.
+ModemManager probes new ttyACM ports for a few seconds after plug-in, which
+disturbs the stream. Install the udev rule from this repository:
+
+```sh
+sudo cp udev/60-ionos-sdr.rules /etc/udev/rules.d/
+sudo udevadm control --reload && sudo udevadm trigger
+```
 
 ### Windows (PothosSDR / radioconda SoapySDR)
 
 ```bat
-cmake -S host\soapy-ionos -B build-soapy -G "Visual Studio 17 2022" -A x64 ^
+cmake -S . -B build-soapy -G "Visual Studio 17 2022" -A x64 ^
       -DSoapySDR_DIR=C:\PothosSDR\cmake
 cmake --build build-soapy --config Release
 cmake --install build-soapy --config Release
@@ -58,9 +63,10 @@ for the hello. Untested.
 | `ring_samples` | `1048576` | host ring size in complex samples (≈ 5 s at 200 ksps) |
 | `probe` | `1` | `probe=0`: `find` lists matching USB ports without opening them |
 
-Discovery: USB ports with VID 0x303A and PID 0x4001 (TinyUSB CDC, the current
-firmware) or 0x1001 (USB-Serial/JTAG, older builds). Both PIDs are generic
-Espressif ones, so a port is only reported when it answers with the hello
+Discovery: USB ports with VID 0x303A and PID 0x83EC (Ionos SDR family PID,
+requested in espressif/usb-pids#436), 0x4001 (generic TinyUSB CDC, current
+firmware until the own PID is in use) or 0x1001 (USB-Serial/JTAG, older builds).
+The generic PIDs are shared with any ESP32-S3, so a port is only reported when it answers with the hello
 (`ionos=1`) — or streams IQB2 without a hello (v1 firmware, then fixed
 50 ksps / 430–440 MHz, `F` tuning only). Extra ports to probe can be given in the
 environment: `IONOS_PORTS=/dev/ttyACM3,/tmp/ionos0` (used by the tests).
@@ -135,7 +141,7 @@ mix in SPC1 and MSG1 type 3 blocks; `--v1` behaves like v1 firmware.
 
 ```sh
 cmake --build build-soapy
-host/soapy-ionos/test/run_tests.sh build-soapy        # SECS=60 for a longer soak
+test/run_tests.sh build-soapy        # SECS=60 for a longer soak
 ```
 
 `run_tests.sh` runs the parser unit test (50 random streams with junk, drops,
@@ -149,7 +155,7 @@ that `lost_blocks` equals what the mock dropped.
 Manual run:
 
 ```sh
-python3 host/soapy-ionos/test/ionos_mock.py --link /tmp/ionos0 --drop-every 500 &
+python3 test/ionos_mock.py --link /tmp/ionos0 --drop-every 500 &
 export SOAPY_SDR_PLUGIN_PATH=$PWD/build-soapy
 SoapySDRUtil --probe="driver=ionos,port=/tmp/ionos0"
 SoapySDRUtil --args="driver=ionos,port=/tmp/ionos0" --rate=200e3 --direction=RX
