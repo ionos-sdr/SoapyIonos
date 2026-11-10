@@ -67,6 +67,20 @@ run_stream "200 ksps CS16 drops+cuts"                    "$LOSS" ""             
 run_stream "100 ksps CS8 drops+cuts"                     "$LOSS" ""                               "--rate 100000 --format CS8"
 run_stream "50 ksps CF32 bursts of 20 blocks"            "--drop-every 300 --drop-burst 20" ""    "--rate 50000 --format CF32"
 
+echo "== ionos_spyserver (SpyServer bridge)"
+if [ -x "$BUILD/ionos_spyserver" ]; then
+    start_mock
+    "$BUILD/ionos_spyserver" --args "driver=ionos,port=$PORT" --port 5599 > "$WORK/spy.log" 2>&1 &
+    SPY_PID=$!
+    for _ in $(seq 50); do grep -q listening "$WORK/spy.log" && break; sleep 0.1; done
+    python3 "$HERE/spyserver_test.py" --port 5599 --secs 4 > "$WORK/spytest.log" 2>&1
+    rc=$?
+    sed 's/^/    /' "$WORK/spytest.log" | grep -E "sps|FAIL"
+    kill "$SPY_PID" 2>/dev/null; wait "$SPY_PID" 2>/dev/null
+    stop_mock
+    result $rc "SpyServer client: DeviceInfo, 4 rates x 3 formats, tone, ClientSync, PING"
+fi
+
 echo
 if [ $fails -eq 0 ]; then echo "ALL TESTS PASSED"; else echo "$fails TEST(S) FAILED"; fi
 exit $fails

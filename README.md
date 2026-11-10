@@ -48,6 +48,28 @@ the module must match that ABI version). COM ports are found through SetupAPI;
 macOS: builds with the POSIX serial path; every `/dev/cu.usbmodem*` is probed
 for the hello. Untested.
 
+## SpyServer bridge (SDR++, SDR#, SDRangel)
+
+`ionos_spyserver` (built with the module) serves the device over the SpyServer
+protocol, so clients with a built-in SpyServer source can use the Ionos SDR on
+USB without any client-side plug-in. Official SDR++ builds do not include the
+SoapySDR source; their SpyServer source works out of the box.
+
+```sh
+ionos_spyserver                               # driver=ionos, 127.0.0.1:5555
+ionos_spyserver --args driver=ionos,port=COM9 --bind 0.0.0.0 --port 5555
+```
+
+In SDR++: Source → SpyServer, host `localhost`, port `5555`, Connect.
+
+- Rates: the device's top rate and its halvings (200, 100, 50, 25, 12.5,
+  6.25 ksps), all native device rates — no software decimation in the bridge.
+- Formats: INT16 (native), FLOAT and UINT8, as the client asks.
+- No gain control: the FG23 runs its own AGC.
+- One client at a time. Whole messages are dropped (and counted) when the
+  client reads too slowly; a message is never cut.
+- Works with any SoapySDR device (`--args driver=...`) whose rates halve.
+
 ## Device arguments
 
 | key | default | meaning |
